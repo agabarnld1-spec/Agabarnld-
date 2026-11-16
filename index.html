@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rnld Forex AI — Live AI-Powered Predictions</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-card: #111827;
+      --accent: #3b82f6;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+    }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: #e5e7eb;
+    }
+    
+    .glass {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .price-up { color: var(--green); }
+    .price-down { color: var(--red); }
+    
+    .signal-buy {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .signal-sell {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .signal-hold {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    .ticker-scroll {
+      animation: scroll 40s linear infinite;
+    }
+    
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    
+    .pulse-dot {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 380px;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0e17; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    
+    .nav-link.active {
+      color: #3b82f6;
+      border-bottom: 2px solid #3b82f6;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Top Ticker -->
+  <div class="bg-gray-900/80 border-b border-gray-800 overflow-hidden">
+    <div class="flex ticker-scroll whitespace-nowrap py-2 text-sm">
+      <div class="flex gap-8 px-4" id="ticker-content">
+        <!-- Ticker items will be injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 glass border-b border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
+            <i class="fas fa-chart-line text-white text-sm"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold tracking-tight">Rnld Forex <span class="text-blue-400">AI</span></h1>
+            <p class="text-[10px] text-gray-500 -mt-0.5">Live AI Predictions</p>
+          </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+          <a href="#" class="nav-link active text-blue-400 pb-0.5">Dashboard</a>
+          <a href="#" class="nav-link text-gray-400 hover:text-white transition">Predictions</a>
+          <a href="#" class="nav-link text-gray-400 hover:text-white transition">Pairs</a>
+          <a href="#" class="nav-link text-gray-400 hover:text-white transition">Analysis</a>
+        </nav>
+
+        <!-- Right side -->
+        <div class="flex items-center gap-4">
+          <div class="hidden sm:flex items-center gap-2 text-xs">
+            <span class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></span>
+            <span class="text-gray-400">Live</span>
+          </div>
+          <button id="theme-btn" class="p-2 rounded-lg hover:bg-gray-800 transition">
+            <i class="fas fa-cog text-gray-400"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Top Stats Row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="glass rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-1">Active Predictions</p>
+        <p class="text-2xl font-bold" id="stat-predictions">12</p>
+      </div>
+      <div class="glass rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-1">Win Rate (7D)</p>
+        <p class="text-2xl font-bold text-green-400" id="stat-winrate">68.4%</p>
+      </div>
+      <div class="glass rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-1">Avg Confidence</p>
+        <p class="text-2xl font-bold text-blue-400" id="stat-confidence">74%</p>
+      </div>
+      <div class="glass rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-1">Market Sentiment</p>
+        <p class="text-2xl font-bold text-yellow-400" id="stat-sentiment">Bullish</p>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Left: Chart + Controls -->
+      <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Chart Card -->
+        <div class="glass rounded-2xl p-5">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-3">
+              <select id="pair-select" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="EURUSD">EUR/USD</option>
+                <option value="GBPUSD">GBP/USD</option>
+                <option value="USDJPY">USD/JPY</option>
+                <option value="AUDUSD">AUD/USD</option>
+                <option value="USDCAD">USD/CAD</option>
+                <option value="USDCHF">USD/CHF</option>
+                <option value="NZDUSD">NZD/USD</option>
+                <option value="EURGBP">EUR/GBP</option>
+              </select>
+              <div>
+                <span id="current-price" class="text-xl font-bold">1.08542</span>
+                <span id="price-change" class="ml-2 text-sm price-up">+0.00124 (+0.11%)</span>
+              </div>
+            </div>
+            
+            <div class="flex gap-1 bg-gray-800/60 rounded-lg p-1">
+              <button class="tf-btn px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white" data-tf="1H">1H</button>
+              <button class="tf-btn px-3 py-1.5 text-xs rounded-md text-gray-400 hover:text-white" data-tf="4H">4H</button>
+              <button class="tf-btn px-3 py-1.5 text-xs rounded-md text-gray-400 hover:text-white" data-tf="1D">1D</button>
+              <button class="tf-btn px-3 py-1.5 text-xs rounded-md text-gray-400 hover:text-white" data-tf="1W">1W</button>
+            </div>
+          </div>
+          
+          <div class="chart-container">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- AI Analysis Summary -->
+        <div class="glass rounded-2xl p-5">
+          <h3 class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+            <i class="fas fa-robot text-blue-400"></i>
+            AI Market Analysis
+          </h3>
+          <p id="ai-analysis" class="text-sm text-gray-400 leading-relaxed">
+            Loading analysis...
+          </p>
+        </div>
+      </div>
+
+      <!-- Right: Predictions Panel -->
+      <div class="space-y-6">
+        
+        <!-- Current Signal -->
+        <div id="main-signal" class="signal-buy rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium uppercase tracking-wider text-green-400">AI Signal</span>
+            <span class="text-xs text-gray-400" id="signal-time">Updated 12s ago</span>
+          </div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+              <i class="fas fa-arrow-trend-up text-green-400 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-green-400" id="signal-action">BUY</p>
+              <p class="text-sm text-gray-400" id="signal-pair">EUR/USD · 1H</p>
+            </div>
+          </div>
+          
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-400">Confidence</span>
+                <span class="font-medium" id="signal-confidence">78%</span>
+              </div>
+              <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div id="confidence-bar" class="h-full bg-green-500 rounded-full transition-all duration-700" style="width: 78%"></div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div class="bg-black/20 rounded-lg p-2.5">
+                <p class="text-xs text-gray-500">Entry</p>
+                <p class="font-semibold" id="signal-entry">1.08480</p>
+              </div>
+              <div class="bg-black/20 rounded-lg p-2.5">
+                <p class="text-xs text-gray-500">Target</p>
+                <p class="font-semibold text-green-400" id="signal-target">1.08920</p>
+              </div>
+              <div class="bg-black/20 rounded-lg p-2.5">
+                <p class="text-xs text-gray-500">Stop Loss</p>
+                <p class="font-semibold text-red-400" id="signal-sl">1.08150</p>
+              </div>
+              <div class="bg-black/20 rounded-lg p-2.5">
+                <p class="text-xs text-gray-500">R:R</p>
+                <p class="font-semibold" id="signal-rr">1 : 2.1</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Other Predictions -->
+        <div class="glass rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold">Other Signals</h3>
+            <button class="text-xs text-blue-400 hover:text-blue-300">View all</button>
+          </div>
+          
+          <div class="space-y-3" id="other-signals">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+        <!-- Market Strength -->
+        <div class="glass rounded-2xl p-5">
+          <h3 class="text-sm font-semibold mb-4">Currency Strength</h3>
+          <div class="space-y-3" id="currency-strength">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom: Recent Predictions Table -->
+    <div class="mt-6 glass rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold">Recent AI Predictions</h3>
+        <div class="flex gap-2 text-xs">
+          <span class="px-2 py-1 rounded bg-green-500/20 text-green-400">Win: 41</span>
+          <span class="px-2 py-1 rounded bg-red-500/20 text-red-400">Loss: 19</span>
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-gray-500 border-b border-gray-800">
+              <th class="pb-3 font-medium">Pair</th>
+              <th class="pb-3 font-medium">Signal</th>
+              <th class="pb-3 font-medium">Entry</th>
+              <th class="pb-3 font-medium">Result</th>
+              <th class="pb-3 font-medium">Pips</th>
+              <th class="pb-3 font-medium">Time</th>
+              <th class="pb-3 font-medium">Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="predictions-table" class="divide-y divide-gray-800/50">
+            <!-- Injected by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-800 mt-12 py-6">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-gray-500">
+      <p>© 2026 Rnld Forex AI. AI predictions are for educational purposes only. Trading involves substantial risk of loss.</p>
+      <p class="mt-1">Not financial advice. Past performance is not indicative of future results.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
